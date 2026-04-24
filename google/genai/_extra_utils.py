@@ -45,12 +45,6 @@ if typing.TYPE_CHECKING:
 else:
   McpClientSession: typing.Type = Any
   McpTool: typing.Type = Any
-  try:
-    from mcp import ClientSession as McpClientSession
-    from mcp.types import Tool as McpTool
-  except ImportError:
-    McpClientSession = None
-    McpTool = None
 
 _DEFAULT_MAX_REMOTE_CALLS_AFC = 10
 
@@ -569,7 +563,7 @@ async def parse_config_for_mcp_sessions(
   if parsed_config.tools:
     parsed_config_copy.tools = []
     for tool in parsed_config.tools:
-      if McpClientSession is not None and isinstance(tool, McpClientSession):
+      if 'mcp' in sys.modules and isinstance(tool, sys.modules['mcp'].ClientSession):
         mcp_to_genai_tool_adapter = McpToGenAiToolAdapter(
             tool, await tool.list_tools()
         )
