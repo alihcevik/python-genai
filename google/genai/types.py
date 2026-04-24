@@ -73,15 +73,6 @@ if typing.TYPE_CHECKING:
 else:
   McpClientSession: typing.Type = Any
   McpCallToolResult: typing.Type = Any
-  try:
-    from mcp import types as mcp_types
-    from mcp import ClientSession as McpClientSession
-    from mcp.types import CallToolResult as McpCallToolResult
-
-    _is_mcp_imported = True
-  except ImportError:
-    McpClientSession = None
-    McpCallToolResult = None
 
 if typing.TYPE_CHECKING:
   import yaml
@@ -1800,7 +1791,7 @@ class FunctionResponse(_common.BaseModel):
   def from_mcp_response(
       cls, *, name: str, response: McpCallToolResult
   ) -> 'FunctionResponse':
-    if not _is_mcp_imported:
+    if 'mcp' not in sys.modules:
       raise ValueError(
           'MCP response is not supported. Please ensure that the MCP library is'
           ' imported.'

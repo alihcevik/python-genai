@@ -16,6 +16,7 @@
 """Utils for working with MCP tools."""
 
 from importlib.metadata import PackageNotFoundError, version
+import sys
 import typing
 from typing import Any
 
@@ -28,12 +29,6 @@ if typing.TYPE_CHECKING:
 else:
   McpClientSession: typing.Type = Any
   McpTool: typing.Type = Any
-  try:
-    from mcp.types import Tool as McpTool
-    from mcp import ClientSession as McpClientSession
-  except ImportError:
-    McpTool = None
-    McpClientSession = None
 
 
 def mcp_to_gemini_tool(tool: McpTool) -> types.Tool:
@@ -78,27 +73,30 @@ def mcp_to_gemini_tools(
 
 def has_mcp_tool_usage(tools: types.ToolListUnion) -> bool:
   """Checks whether the list of tools contains any MCP tools or sessions."""
-  if McpClientSession is None:
+  if 'mcp' not in sys.modules:
     return False
+  from mcp.types import Tool as RealMcpTool
+  from mcp import ClientSession as RealMcpClientSession
   for tool in tools:
-    if isinstance(tool, McpTool) or isinstance(tool, McpClientSession):
+    if isinstance(tool, RealMcpTool) or isinstance(tool, RealMcpClientSession):
       return True
   return False
 
 
 def has_mcp_session_usage(tools: types.ToolListUnion) -> bool:
   """Checks whether the list of tools contains any MCP sessions."""
-  if McpClientSession is None:
+  if 'mcp' not in sys.modules:
     return False
+  from mcp import ClientSession as RealMcpClientSession
   for tool in tools:
-    if isinstance(tool, McpClientSession):
+    if isinstance(tool, RealMcpClientSession):
       return True
   return False
 
 
 def set_mcp_usage_header(headers: dict[str, str]) -> None:
   """Sets the MCP version label in the Google API client header."""
-  if McpClientSession is None:
+  if 'mcp' not in sys.modules:
     return
   try:
     version_label = version("mcp")
