@@ -19,8 +19,10 @@ from . import interactions
 from . import types
 from . import version
 from .client import Client
+from .tools import tool
 
 
 __version__ = version.__version__
 
-__all__ = ['Client']
+__all__ = ['Client', 'tool']
+
