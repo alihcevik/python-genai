@@ -960,13 +960,15 @@ def t_tool(
   if not origin:
     return None
   if inspect.isfunction(origin) or inspect.ismethod(origin):
-    return types.Tool(
-        function_declarations=[
-            types.FunctionDeclaration.from_callable(
-                client=client, callable=origin
-            )
-        ]
+    declaration = types.FunctionDeclaration.from_callable(
+        client=client, callable=origin
     )
+    if hasattr(origin, '_tool_name') and origin._tool_name:
+      declaration.name = origin._tool_name
+    if hasattr(origin, '_tool_description') and origin._tool_description:
+      declaration.description = origin._tool_description
+    return types.Tool(function_declarations=[declaration])
+
   elif McpTool is not None and is_duck_type_of(origin, McpTool):
     return mcp_to_gemini_tool(origin)
   elif isinstance(origin, dict):
