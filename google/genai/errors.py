@@ -303,3 +303,19 @@ class UnknownApiResponseError(ValueError):
   pass
 
 ExperimentalWarning = _common.ExperimentalWarning
+
+# Re-export Interactions API error types to avoid private module access
+from ._interactions._exceptions import (
+    GeminiNextGenAPIClientError,
+    APIStatusError as InteractionsAPIStatusError,
+    APIConnectionError as InteractionsAPIConnectionError,
+    APITimeoutError as InteractionsAPITimeoutError,
+    BadRequestError,
+    AuthenticationError,
+    PermissionDeniedError,
+    NotFoundError,
+    ConflictError,
+    UnprocessableEntityError,
+    RateLimitError,
+    InternalServerError,
+)
