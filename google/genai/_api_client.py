@@ -46,6 +46,7 @@ import google.auth.credentials
 from google.auth.credentials import Credentials
 from google.auth.transport import mtls
 from google.auth.transport.requests import AuthorizedSession
+from google.auth import exceptions as auth_exceptions
 import httpx
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -506,7 +507,7 @@ def retry_args(options: Optional[HttpRetryOptions]) -> _common.StringDict:
   stop = tenacity.stop_after_attempt(options.attempts or _RETRY_ATTEMPTS)
   retriable_codes = options.http_status_codes or _RETRY_HTTP_STATUS_CODES
   retry = tenacity.retry_if_exception(
-      lambda e: isinstance(e, errors.APIError) and e.code in retriable_codes,
+      lambda e: (isinstance(e, errors.APIError) and e.code in retriable_codes) or isinstance(e, (httpx.TimeoutException, httpx.ConnectError)),
   )
   wait = tenacity.wait_exponential_jitter(
       initial=options.initial_delay or _RETRY_INITIAL_DELAY,
@@ -1402,6 +1403,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)
@@ -1479,6 +1481,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)

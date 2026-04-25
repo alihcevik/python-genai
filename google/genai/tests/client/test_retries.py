@@ -1361,3 +1361,10 @@ def test_aiohttp_retries_failed_request_retries_unsuccessfully_mtls(
         mock_request.assert_called()
 
   asyncio.run(run())
+
+def test_retry_args_covers_httpx_exceptions():
+  args = api_client.retry_args(types.HttpRetryOptions())
+  retry_predicate = args['retry'].predicate
+  
+  assert retry_predicate(httpx.TimeoutException("timeout"))
+  assert retry_predicate(httpx.ConnectError("connect error"))
