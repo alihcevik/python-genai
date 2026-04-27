@@ -693,3 +693,8 @@ def test_t_schema_sets_property_ordering_for_schema_type(client):
 
   transformed_schema = _transformers.t_schema(client, schema)
   assert transformed_schema.property_ordering == ['name', 'population']
+
+def test_schema_with_additional_properties_alias():
+    from google.genai.types import Schema
+    s = Schema(additionalProperties=True)
+    assert s.additional_properties == True
