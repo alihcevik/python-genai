@@ -2530,6 +2530,7 @@ class JSONSchema(_common.BaseModel):
   )
   additional_properties: Optional[Any] = Field(
       default=None,
+      alias="additionalProperties",
       description="""Can either be a boolean or an object; controls the presence of additional properties.""",
   )
   any_of: Optional[list['JSONSchema']] = Field(
@@ -2574,6 +2575,7 @@ class Schema(_common.BaseModel):
 
   additional_properties: Optional[Any] = Field(
       default=None,
+      alias="additionalProperties",
       description="""Optional. Can either be a boolean or an object; controls the presence of additional properties.""",
   )
   defs: Optional[dict[str, 'Schema']] = Field(
