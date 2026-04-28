@@ -83,8 +83,8 @@ def test_join_url_path_base_url_without_path_without_trailing_slash():
 def test_build_request_sets_library_version_headers(monkeypatch):
   request_client = build_test_client(monkeypatch).models._api_client
   request = request_client._build_request('GET', 'test/path', {'key': 'value'})
-  assert 'google-genai-sdk/' in request.headers['user-agent']
-  assert 'gl-python/' in request.headers['user-agent']
+  assert 'google-genai-sdk/' in request.headers['User-Agent']
+  assert 'gl-python/' in request.headers['User-Agent']
   assert 'google-genai-sdk/' in request.headers['x-goog-api-client']
   assert 'gl-python/' in request.headers['x-goog-api-client']
 
@@ -101,9 +101,9 @@ def test_build_request_appends_to_user_agent_headers(monkeypatch):
           headers={'user-agent': 'test-user-agent'},
       ),
   )
-  assert 'test-user-agent' in request.headers['user-agent']
-  assert 'google-genai-sdk/' in request.headers['user-agent']
-  assert 'gl-python/' in request.headers['user-agent']
+  assert 'test-user-agent' in request.headers['User-Agent']
+  assert 'google-genai-sdk/' in request.headers['User-Agent']
+  assert 'gl-python/' in request.headers['User-Agent']
   assert 'google-genai-sdk/' in request.headers['x-goog-api-client']
 
 
@@ -119,7 +119,7 @@ def test_build_request_appends_to_goog_api_client_headers(monkeypatch):
           headers={'x-goog-api-client': 'test-goog-api-client'},
       ),
   )
-  assert 'google-genai-sdk/' in request.headers['user-agent']
+  assert 'google-genai-sdk/' in request.headers['User-Agent']
   assert 'test-goog-api-client' in request.headers['x-goog-api-client']
   assert 'google-genai-sdk/' in request.headers['x-goog-api-client']
   assert 'gl-python/' in request.headers['x-goog-api-client']
@@ -128,7 +128,7 @@ def test_build_request_appends_to_goog_api_client_headers(monkeypatch):
 def test_build_request_keeps_sdk_version_headers(monkeypatch):
   headers_to_inject = {}
   api_client.append_library_version_headers(headers_to_inject)
-  assert 'google-genai-sdk/' in headers_to_inject['user-agent']
+  assert 'google-genai-sdk/' in headers_to_inject['User-Agent']
   request_client = build_test_client(monkeypatch).models._api_client
   request = request_client._build_request(
       'GET',
@@ -140,7 +140,7 @@ def test_build_request_keeps_sdk_version_headers(monkeypatch):
           headers=headers_to_inject,
       ),
   )
-  assert 'google-genai-sdk/' in request.headers['user-agent']
+  assert 'google-genai-sdk/' in request.headers['User-Agent']
   assert 'gl-python/' in request.headers['x-goog-api-client']
   assert 'google-genai-sdk/' in request.headers['x-goog-api-client']
   assert 'gl-python/' in request.headers['x-goog-api-client']
