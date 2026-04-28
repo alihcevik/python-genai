@@ -2257,3 +2257,25 @@ async def test_bidi_setup_replicated_voice_config_with_consent(vertexai):
       == 'test_sig_abc123'
   )
 
+
+@pytest.mark.asyncio
+async def test_bidi_setup_to_api_with_input_transcription_vertex_specific():
+  config_dict = {
+      'input_audio_transcription': {'language_codes': ['en-US']},
+  }
+  config = types.LiveConnectConfig(**config_dict)
+  expected_result = {
+      'setup': {
+          'model': 'test_model',
+          'inputAudioTranscription': {'languageCodes': ['en-US']},
+      }
+  }
+
+  result = await get_connect_message(
+      mock_api_client(vertexai=True), model='test_model', config=config
+  )
+
+  assert (
+      result['setup']['inputAudioTranscription']
+      == expected_result['setup']['inputAudioTranscription']
+  )
