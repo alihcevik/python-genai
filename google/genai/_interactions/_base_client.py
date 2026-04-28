@@ -683,7 +683,7 @@ class BaseClient(Generic[_HttpxClientT, _DefaultStreamT]):
         return {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": self.user_agent,
+            "user-agent": self.user_agent,
             **self.auth_headers,
             **self._custom_headers,
         }
