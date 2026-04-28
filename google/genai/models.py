@@ -6597,6 +6597,54 @@ class Models(_api_module.BaseModule):
       response.generated_images[0].image.show()
       # Shows a man with a dog.
     """
+    requested_count = 1
+    if config:
+      if isinstance(config, dict):
+        requested_count = config.get('number_of_images', 1)
+      else:
+        requested_count = getattr(config, 'number_of_images', 1) or 1
+
+    if "gemini-2.5-flash-image" in model and requested_count > 1:
+      generated_images = []
+      positive_prompt_safety_attributes = None
+      
+      if isinstance(config, dict):
+        new_config = config.copy()
+      elif config is not None:
+        if hasattr(config, 'model_dump'):
+          new_config = config.model_dump()
+        elif hasattr(config, 'dict'):
+          new_config = config.dict()
+        else:
+          new_config = {k: v for k, v in config.__dict__.items() if not k.startswith('_')}
+      else:
+        new_config = {}
+      
+      new_config['number_of_images'] = 1
+      
+      for _ in range(requested_count):
+        api_response = self._generate_images(
+            model=model,
+            prompt=prompt,
+            config=new_config,
+        )
+        if api_response and api_response.generated_images:
+          for generated_image in api_response.generated_images:
+            if (
+                generated_image.safety_attributes
+                and generated_image.safety_attributes.content_type
+                == 'Positive Prompt'
+            ):
+              positive_prompt_safety_attributes = generated_image.safety_attributes
+            else:
+              generated_images.append(generated_image)
+              
+      response = types.GenerateImagesResponse(
+          generated_images=generated_images,
+          positive_prompt_safety_attributes=positive_prompt_safety_attributes,
+      )
+      return response
+
     api_response = self._generate_images(
         model=model,
         prompt=prompt,
@@ -8818,6 +8866,54 @@ class AsyncModels(_api_module.BaseModule):
       response.generated_images[0].image.show()
       # Shows a man with a dog.
     """
+    requested_count = 1
+    if config:
+      if isinstance(config, dict):
+        requested_count = config.get('number_of_images', 1)
+      else:
+        requested_count = getattr(config, 'number_of_images', 1) or 1
+
+    if "gemini-2.5-flash-image" in model and requested_count > 1:
+      generated_images = []
+      positive_prompt_safety_attributes = None
+      
+      if isinstance(config, dict):
+        new_config = config.copy()
+      elif config is not None:
+        if hasattr(config, 'model_dump'):
+          new_config = config.model_dump()
+        elif hasattr(config, 'dict'):
+          new_config = config.dict()
+        else:
+          new_config = {k: v for k, v in config.__dict__.items() if not k.startswith('_')}
+      else:
+        new_config = {}
+      
+      new_config['number_of_images'] = 1
+      
+      for _ in range(requested_count):
+        api_response = await self._generate_images(
+            model=model,
+            prompt=prompt,
+            config=new_config,
+        )
+        if api_response and api_response.generated_images:
+          for generated_image in api_response.generated_images:
+            if (
+                generated_image.safety_attributes
+                and generated_image.safety_attributes.content_type
+                == 'Positive Prompt'
+            ):
+              positive_prompt_safety_attributes = generated_image.safety_attributes
+            else:
+              generated_images.append(generated_image)
+              
+      response = types.GenerateImagesResponse(
+          generated_images=generated_images,
+          positive_prompt_safety_attributes=positive_prompt_safety_attributes,
+      )
+      return response
+
     api_response = await self._generate_images(
         model=model,
         prompt=prompt,
