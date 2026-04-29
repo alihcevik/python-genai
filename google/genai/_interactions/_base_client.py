@@ -462,7 +462,8 @@ class BaseClient(Generic[_HttpxClientT, _DefaultStreamT]):
         self._validate_headers(headers_dict, custom_headers)
 
         # headers are case-insensitive while dictionaries are not.
-        headers = httpx.Headers(headers_dict)
+        headers = httpx.Headers()
+        headers.update(headers_dict)
 
         idempotency_header = self._idempotency_header
         if idempotency_header and options.idempotency_key and idempotency_header not in headers:
@@ -683,7 +684,7 @@ class BaseClient(Generic[_HttpxClientT, _DefaultStreamT]):
         return {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": self.user_agent,
+            "user-agent": self.user_agent,
             **self.auth_headers,
             **self._custom_headers,
         }

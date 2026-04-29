@@ -46,6 +46,7 @@ import google.auth.credentials
 from google.auth.credentials import Credentials
 from google.auth.transport import mtls
 from google.auth.transport.requests import AuthorizedSession
+from google.auth import exceptions as auth_exceptions
 import httpx
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -340,18 +341,22 @@ class HttpResponse:
 
     chunk = ''
     balance = 0
+    data_buffer: list[str] = []
     if isinstance(self.response_stream, httpx.Response):
       response_stream = self.response_stream.iter_lines()
     else:
       response_stream = self.response_stream.iter_lines(decode_unicode=True)
     for line in response_stream:
       if not line:
+        if data_buffer:
+          yield '\n'.join(data_buffer)
+          data_buffer = []
         continue
 
       # In streaming mode, the response of JSON is prefixed with "data: " which
       # we must strip before parsing.
       if line.startswith('data: '):
-        yield line[len('data: '):]
+        data_buffer.append(line[len('data: '):])
         continue
 
       # When API returns an error message, it comes line by line. So we buffer
@@ -371,6 +376,8 @@ class HttpResponse:
     # If there is any remaining chunk, yield it.
     if chunk:
       yield chunk
+    if data_buffer:
+      yield '\n'.join(data_buffer)
 
   async def _aiter_response_stream(self) -> AsyncIterator[str]:
     """Asynchronously iterates over chunks retrieved from the API."""
@@ -386,16 +393,20 @@ class HttpResponse:
 
     chunk = ''
     balance = 0
+    data_buffer: list[str] = []
     # httpx.Response has a dedicated async line iterator.
     if isinstance(self.response_stream, httpx.Response):
       try:
         async for line in self.response_stream.aiter_lines():
           if not line:
+            if data_buffer:
+              yield '\n'.join(data_buffer)
+              data_buffer = []
             continue
           # In streaming mode, the response of JSON is prefixed with "data: "
           # which we must strip before parsing.
           if line.startswith('data: '):
-            yield line[len('data: '):]
+            data_buffer.append(line[len('data: '):])
             continue
 
           # When API returns an error message, it comes line by line. So we buffer
@@ -414,6 +425,8 @@ class HttpResponse:
         # If there is any remaining chunk, yield it.
         if chunk:
           yield chunk
+        if data_buffer:
+          yield '\n'.join(data_buffer)
       finally:
         # Close the response and release the connection.
         await self.response_stream.aclose()
@@ -431,12 +444,15 @@ class HttpResponse:
           # Decode the bytes and remove trailing whitespace and newlines.
           line = line_bytes.decode('utf-8').rstrip()
           if not line:
+            if data_buffer:
+              yield '\n'.join(data_buffer)
+              data_buffer = []
             continue
 
           # In streaming mode, the response of JSON is prefixed with "data: "
           # which we must strip before parsing.
           if line.startswith('data: '):
-            yield line[len('data: '):]
+            data_buffer.append(line[len('data: '):])
             continue
 
           # When API returns an error message, it comes line by line. So we
@@ -455,6 +471,8 @@ class HttpResponse:
         # If there is any remaining chunk, yield it.
         if chunk:
           yield chunk
+        if data_buffer:
+          yield '\n'.join(data_buffer)
       finally:
         # Release the connection back to the pool for potential reuse.
         self.response_stream.release()
@@ -506,7 +524,8 @@ def retry_args(options: Optional[HttpRetryOptions]) -> _common.StringDict:
   stop = tenacity.stop_after_attempt(options.attempts or _RETRY_ATTEMPTS)
   retriable_codes = options.http_status_codes or _RETRY_HTTP_STATUS_CODES
   retry = tenacity.retry_if_exception(
-      lambda e: isinstance(e, errors.APIError) and e.code in retriable_codes,
+      lambda e: (isinstance(e, errors.APIError) and e.code in retriable_codes)
+      or isinstance(e, (httpx.TimeoutException, httpx.ConnectError)),
   )
   wait = tenacity.wait_exponential_jitter(
       initial=options.initial_delay or _RETRY_INITIAL_DELAY,
@@ -1402,6 +1421,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)
@@ -1479,6 +1499,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)
