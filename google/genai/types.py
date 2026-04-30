@@ -6951,6 +6951,10 @@ class GroundingChunkRetrievedContext(_common.BaseModel):
       default=None,
       description="""Optional. Name of the `FileSearchStore` containing the document. Example: `fileSearchStores/123`. This field is not supported in Vertex AI.""",
   )
+  page_number: Optional[int] = Field(
+      default=None,
+      description="""Optional. Page number of the retrieved context. This field is not supported in Vertex AI.""",
+  )
 
 
 class GroundingChunkRetrievedContextDict(TypedDict, total=False):
@@ -6980,6 +6984,9 @@ class GroundingChunkRetrievedContextDict(TypedDict, total=False):
 
   file_search_store: Optional[str]
   """Optional. Name of the `FileSearchStore` containing the document. Example: `fileSearchStores/123`. This field is not supported in Vertex AI."""
+
+  page_number: Optional[int]
+  """Optional. Page number of the retrieved context. This field is not supported in Vertex AI."""
 
 
 GroundingChunkRetrievedContextOrDict = Union[
@@ -8131,7 +8138,7 @@ class GenerateContentResponse(_common.BaseModel):
         inspect.isclass(response_schema)
         and not (
             isinstance(response_schema, builtin_types.GenericAlias)
-        )  # Needed for Python 3.9 and 3.10
+        )  # Needed for Python 3.10
         and issubclass(response_schema, pydantic.BaseModel)
     ):
       # Pydantic schema.

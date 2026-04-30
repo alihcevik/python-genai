@@ -1169,6 +1169,11 @@ async def _t_live_connect_config(
     parameter_model = config
     parameter_model.system_instruction = system_instruction
 
+  if parameter_model.input_audio_transcription and api_client.vertexai:
+    raise ValueError(
+        'input_audio_transcription is not supported on Vertex AI.'
+    )
+
   # Create a copy of the config model with the tools field cleared as they will
   # be replaced with the MCP tools converted to GenAI tools.
   parameter_model_copy = parameter_model.model_copy(update={'tools': None})
