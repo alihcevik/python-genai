@@ -1446,14 +1446,20 @@ async def test_bidi_setup_to_api_with_input_transcription(vertexai):
       }
   }
 
-  result = await get_connect_message(
-      mock_api_client(vertexai=vertexai), model='test_model', config=config
-  )
+  if vertexai:
+    with pytest.raises(ValueError, match='input_audio_transcription is not supported on Vertex AI'):
+      await get_connect_message(
+          mock_api_client(vertexai=vertexai), model='test_model', config=config
+      )
+  else:
+    result = await get_connect_message(
+        mock_api_client(vertexai=vertexai), model='test_model', config=config
+    )
 
-  assert (
-      result['setup']['inputAudioTranscription']
-      == expected_result['setup']['inputAudioTranscription']
-  )
+    assert (
+        result['setup']['inputAudioTranscription']
+        == expected_result['setup']['inputAudioTranscription']
+    )
 
 
 @pytest.mark.parametrize('vertexai', [True, False])
