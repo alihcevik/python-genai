@@ -14,6 +14,14 @@
 #
 
 """Google Gen AI SDK"""
+# Workaround for AttributeError: module 'proto' has no attribute 'module'
+try:
+    import proto
+    if not hasattr(proto, 'module') and hasattr(proto, 'Module'):
+        proto.module = proto.Module
+except ImportError:
+    pass
+
 
 from . import interactions
 from . import types

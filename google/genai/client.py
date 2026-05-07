@@ -47,7 +47,7 @@ from . import _interactions
 
 from ._interactions.resources import AsyncInteractionsResource as AsyncNextGenInteractionsResource, InteractionsResource as NextGenInteractionsResource
 from ._interactions.resources import WebhooksResource, AsyncWebhooksResource
-_interactions_experimental_warned = False
+
 
 class AsyncGeminiNextGenAPIClientAdapter(_interactions.AsyncGeminiNextGenAPIClientAdapter):
   """Adapter for the Gemini NextGen API Client."""
@@ -189,14 +189,6 @@ class AsyncClient:
 
   @property
   def interactions(self) -> AsyncNextGenInteractionsResource:
-    global _interactions_experimental_warned
-    if not _interactions_experimental_warned:
-      _interactions_experimental_warned = True
-      warnings.warn(
-          'Interactions usage is experimental and may change in future versions.',
-          category=UserWarning,
-          stacklevel=1,
-      )
     return self._nextgen_client.interactions
 
   @property
@@ -326,7 +318,6 @@ class Client:
   `enterprise=True,
   project="your-project-id", location="us-central1"` or by defining
   `GOOGLE_GENAI_USE_ENTERPRISE=true`, `GOOGLE_CLOUD_PROJECT` and
-  `GOOGLE_CLOUD_LOCATION` environment variables.
   `GOOGLE_CLOUD_LOCATION` environment variables.
 
   Attributes:
@@ -555,14 +546,6 @@ class Client:
 
   @property
   def interactions(self) -> NextGenInteractionsResource:
-    global _interactions_experimental_warned
-    if not _interactions_experimental_warned:
-      _interactions_experimental_warned = True
-      warnings.warn(
-        'Interactions usage is experimental and may change in future versions.',
-        category=UserWarning,
-        stacklevel=2,
-      )
     return self._nextgen_client.interactions
 
   @property

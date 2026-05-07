@@ -6951,6 +6951,14 @@ class GroundingChunkRetrievedContext(_common.BaseModel):
       default=None,
       description="""Optional. Name of the `FileSearchStore` containing the document. Example: `fileSearchStores/123`. This field is not supported in Vertex AI.""",
   )
+  page_number: Optional[int] = Field(
+      default=None,
+      description="""Optional. Page number of the retrieved context. This field is not supported in Vertex AI.""",
+  )
+  media_id: Optional[str] = Field(
+      default=None,
+      description="""Optional. Media ID. This field is not supported in Vertex AI.""",
+  )
 
 
 class GroundingChunkRetrievedContextDict(TypedDict, total=False):
@@ -6980,6 +6988,12 @@ class GroundingChunkRetrievedContextDict(TypedDict, total=False):
 
   file_search_store: Optional[str]
   """Optional. Name of the `FileSearchStore` containing the document. Example: `fileSearchStores/123`. This field is not supported in Vertex AI."""
+
+  page_number: Optional[int]
+  """Optional. Page number of the retrieved context. This field is not supported in Vertex AI."""
+
+  media_id: Optional[str]
+  """Optional. Media ID. This field is not supported in Vertex AI."""
 
 
 GroundingChunkRetrievedContextOrDict = Union[
@@ -8131,7 +8145,7 @@ class GenerateContentResponse(_common.BaseModel):
         inspect.isclass(response_schema)
         and not (
             isinstance(response_schema, builtin_types.GenericAlias)
-        )  # Needed for Python 3.9 and 3.10
+        )  # Needed for Python 3.10
         and issubclass(response_schema, pydantic.BaseModel)
     ):
       # Pydantic schema.
@@ -15194,6 +15208,12 @@ class CreateFileSearchStoreConfig(_common.BaseModel):
       description="""The human-readable display name for the file search store.
       """,
   )
+  embedding_model: Optional[str] = Field(
+      default=None,
+      description="""The embedding model to use for the FileSearchStore.
+      Format: `models/{model}`. If not specified, the default embedding model will be used.
+      """,
+  )
 
 
 class CreateFileSearchStoreConfigDict(TypedDict, total=False):
@@ -15204,6 +15224,11 @@ class CreateFileSearchStoreConfigDict(TypedDict, total=False):
 
   display_name: Optional[str]
   """The human-readable display name for the file search store.
+      """
+
+  embedding_model: Optional[str]
+  """The embedding model to use for the FileSearchStore.
+      Format: `models/{model}`. If not specified, the default embedding model will be used.
       """
 
 
@@ -15271,6 +15296,10 @@ class FileSearchStore(_common.BaseModel):
       description="""The size of raw bytes ingested into the FileSearchStore. This is the
       total size of all the documents in the FileSearchStore.""",
   )
+  embedding_model: Optional[str] = Field(
+      default=None,
+      description="""The embedding model used by the FileSearchStore.""",
+  )
 
 
 class FileSearchStoreDict(TypedDict, total=False):
@@ -15300,6 +15329,9 @@ class FileSearchStoreDict(TypedDict, total=False):
   size_bytes: Optional[int]
   """The size of raw bytes ingested into the FileSearchStore. This is the
       total size of all the documents in the FileSearchStore."""
+
+  embedding_model: Optional[str]
+  """The embedding model used by the FileSearchStore."""
 
 
 FileSearchStoreOrDict = Union[FileSearchStore, FileSearchStoreDict]
@@ -21198,3 +21230,21 @@ class UploadToFileSearchStoreOperation(_common.BaseModel, Operation):
 
     response_dict = _UploadToFileSearchStoreOperation_from_mldev(api_response)
     return cls._from_response(response=response_dict, kwargs={})
+
+
+class DownloadMediaConfig(_common.BaseModel):
+  """Used to override the default configuration."""
+
+  http_options: Optional[HttpOptions] = Field(
+      default=None, description="""Used to override HTTP request options."""
+  )
+
+
+class DownloadMediaConfigDict(TypedDict, total=False):
+  """Used to override the default configuration."""
+
+  http_options: Optional[HttpOptionsDict]
+  """Used to override HTTP request options."""
+
+
+DownloadMediaConfigOrDict = Union[DownloadMediaConfig, DownloadMediaConfigDict]

@@ -46,6 +46,7 @@ import google.auth.credentials
 from google.auth.credentials import Credentials
 from google.auth.transport import mtls
 from google.auth.transport.requests import AuthorizedSession
+from google.auth import exceptions as auth_exceptions
 import httpx
 from pydantic import BaseModel
 from pydantic import ValidationError
@@ -124,17 +125,26 @@ def append_library_version_headers(headers: dict[str, str]) -> None:
   version_header_value = f'{library_label} {language_label}'
   if (
       'user-agent' in headers
-      and version_header_value not in headers['user-agent']
+      and library_label not in headers['user-agent']
   ):
     headers['user-agent'] = f'{version_header_value} ' + headers['user-agent']
+  elif 'user-agent' in headers and language_label not in headers['user-agent']:
+    headers['user-agent'] = f'{headers["user-agent"]} {language_label}'
   elif 'user-agent' not in headers:
     headers['user-agent'] = version_header_value
   if (
       'x-goog-api-client' in headers
-      and version_header_value not in headers['x-goog-api-client']
+      and library_label not in headers['x-goog-api-client']
   ):
     headers['x-goog-api-client'] = (
         f'{version_header_value} ' + headers['x-goog-api-client']
+    )
+  elif (
+      'x-goog-api-client' in headers
+      and language_label not in headers['x-goog-api-client']
+  ):
+    headers['x-goog-api-client'] = (
+        f"{headers['x-goog-api-client']} {language_label}"
     )
   elif 'x-goog-api-client' not in headers:
     headers['x-goog-api-client'] = version_header_value
@@ -340,18 +350,22 @@ class HttpResponse:
 
     chunk = ''
     balance = 0
+    data_buffer: list[str] = []
     if isinstance(self.response_stream, httpx.Response):
       response_stream = self.response_stream.iter_lines()
     else:
       response_stream = self.response_stream.iter_lines(decode_unicode=True)
     for line in response_stream:
       if not line:
+        if data_buffer:
+          yield '\n'.join(data_buffer)
+          data_buffer = []
         continue
 
       # In streaming mode, the response of JSON is prefixed with "data: " which
       # we must strip before parsing.
       if line.startswith('data: '):
-        yield line[len('data: '):]
+        data_buffer.append(line[len('data: '):])
         continue
 
       # When API returns an error message, it comes line by line. So we buffer
@@ -371,6 +385,8 @@ class HttpResponse:
     # If there is any remaining chunk, yield it.
     if chunk:
       yield chunk
+    if data_buffer:
+      yield '\n'.join(data_buffer)
 
   async def _aiter_response_stream(self) -> AsyncIterator[str]:
     """Asynchronously iterates over chunks retrieved from the API."""
@@ -386,16 +402,20 @@ class HttpResponse:
 
     chunk = ''
     balance = 0
+    data_buffer: list[str] = []
     # httpx.Response has a dedicated async line iterator.
     if isinstance(self.response_stream, httpx.Response):
       try:
         async for line in self.response_stream.aiter_lines():
           if not line:
+            if data_buffer:
+              yield '\n'.join(data_buffer)
+              data_buffer = []
             continue
           # In streaming mode, the response of JSON is prefixed with "data: "
           # which we must strip before parsing.
           if line.startswith('data: '):
-            yield line[len('data: '):]
+            data_buffer.append(line[len('data: '):])
             continue
 
           # When API returns an error message, it comes line by line. So we buffer
@@ -414,6 +434,8 @@ class HttpResponse:
         # If there is any remaining chunk, yield it.
         if chunk:
           yield chunk
+        if data_buffer:
+          yield '\n'.join(data_buffer)
       finally:
         # Close the response and release the connection.
         await self.response_stream.aclose()
@@ -431,12 +453,15 @@ class HttpResponse:
           # Decode the bytes and remove trailing whitespace and newlines.
           line = line_bytes.decode('utf-8').rstrip()
           if not line:
+            if data_buffer:
+              yield '\n'.join(data_buffer)
+              data_buffer = []
             continue
 
           # In streaming mode, the response of JSON is prefixed with "data: "
           # which we must strip before parsing.
           if line.startswith('data: '):
-            yield line[len('data: '):]
+            data_buffer.append(line[len('data: '):])
             continue
 
           # When API returns an error message, it comes line by line. So we
@@ -455,6 +480,8 @@ class HttpResponse:
         # If there is any remaining chunk, yield it.
         if chunk:
           yield chunk
+        if data_buffer:
+          yield '\n'.join(data_buffer)
       finally:
         # Release the connection back to the pool for potential reuse.
         self.response_stream.release()
@@ -506,7 +533,8 @@ def retry_args(options: Optional[HttpRetryOptions]) -> _common.StringDict:
   stop = tenacity.stop_after_attempt(options.attempts or _RETRY_ATTEMPTS)
   retriable_codes = options.http_status_codes or _RETRY_HTTP_STATUS_CODES
   retry = tenacity.retry_if_exception(
-      lambda e: isinstance(e, errors.APIError) and e.code in retriable_codes,
+      lambda e: (isinstance(e, errors.APIError) and e.code in retriable_codes)
+      or isinstance(e, (httpx.TimeoutException, httpx.ConnectError)),
   )
   wait = tenacity.wait_exponential_jitter(
       initial=options.initial_delay or _RETRY_INITIAL_DELAY,
@@ -838,14 +866,10 @@ class BaseApiClient:
     )
 
   def _use_google_auth_async(self) -> bool:
-    try:
-      from google.auth.aio.credentials import StaticCredentials
-      from google.auth.aio.transport.sessions import AsyncAuthorizedSession
-    except ImportError:
-      return False
     return bool(
         has_aiohttp
         and self.vertexai
+        and hasattr(mtls, 'should_use_client_cert')
         and mtls.should_use_client_cert()  # type: ignore[no-untyped-call]
         and mtls.has_default_client_cert_source()  # type: ignore[no-untyped-call]
         and not self._http_options.httpx_async_client
@@ -858,11 +882,36 @@ class BaseApiClient:
 
     if self._aiohttp_session is None and self._use_google_auth_async():
       try:
-        from google.auth.aio.credentials import StaticCredentials
+        from google.auth.aio.credentials import Credentials as AsyncCredentials
         from google.auth.aio.transport.sessions import AsyncAuthorizedSession
 
-        async_creds = StaticCredentials(token=self._access_token())  # type: ignore[no-untyped-call]
-        self._aiohttp_session = AsyncAuthorizedSession(async_creds)  # type: ignore[no-untyped-call,assignment]
+        class _RefreshableAsyncCredentials(AsyncCredentials):  # type: ignore[misc, valid-type]
+          """Adapter to use the client's sync credentials in an AsyncAuthorizedSession."""
+
+          def __init__(self, client: 'BaseApiClient'):
+            super().__init__()  # type: ignore[no-untyped-call]
+            self._client = client
+
+          async def before_request(
+              self, request: Any, method: str, url: str, headers: dict[str, str]
+          ) -> None:
+            token = await self._client._async_access_token()
+            headers['Authorization'] = f'Bearer {token}'
+            if (
+                self._client._credentials
+                and self._client._credentials.quota_project_id
+            ):
+              headers['x-goog-user-project'] = (
+                  self._client._credentials.quota_project_id
+              )
+
+          @property
+          def valid(self) -> bool:
+            if not self._client._credentials:
+              return False
+            return not self._client._credentials.expired
+
+        self._aiohttp_session = AsyncAuthorizedSession(_RefreshableAsyncCredentials(self))  # type: ignore[no-untyped-call,assignment]
         return self._aiohttp_session  # type: ignore[return-value]
       except ImportError:
         pass
@@ -1402,6 +1451,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)
@@ -1479,6 +1529,7 @@ class BaseApiClient:
             aiohttp.ClientConnectorDNSError,
             aiohttp.ClientOSError,
             aiohttp.ServerDisconnectedError,
+            auth_exceptions.TransportError,
         ) as e:
           await asyncio.sleep(1 + random.randint(0, 9))
           logger.info('Retrying due to aiohttp error: %s' % e)

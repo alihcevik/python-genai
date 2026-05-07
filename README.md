@@ -1135,14 +1135,18 @@ print(response)
 #### Local Count Tokens
 
 ```python
-tokenizer = genai.LocalTokenizer(model_name='gemini-2.5-flash')
+from google.genai import local_tokenizer
+
+tokenizer = local_tokenizer.LocalTokenizer(model_name='gemini-2.5-flash')
 result = tokenizer.count_tokens("What is your name?")
 ```
 
 #### Local Compute Tokens
 
 ```python
-tokenizer = genai.LocalTokenizer(model_name='gemini-2.5-flash')
+from google.genai import local_tokenizer
+
+tokenizer = local_tokenizer.LocalTokenizer(model_name='gemini-2.5-flash')
 result = tokenizer.compute_tokens("What is your name?")
 ```
 
@@ -1280,7 +1284,7 @@ video.show()
 from google.genai import types
 
 # Read local image (uses mimetypes.guess_type to infer mime type)
-image = types.Image.from_file("local/path/file.png")
+image = types.Image.from_file(location="local/path/file.png")
 
 # Create operation
 operation = client.models.generate_videos(
@@ -1481,8 +1485,6 @@ print(response.text)
 ```
 
 ## Interactions (Preview)
-
-> **Warning:** The Interactions API is in **Beta**. This is a preview of an experimental feature. Features and schemas are subject to **breaking changes**.
 
 The Interactions API is a unified interface for interacting with Gemini models and agents. It simplifies state management, tool orchestration, and long-running tasks.
 
